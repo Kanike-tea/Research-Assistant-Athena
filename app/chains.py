@@ -13,9 +13,9 @@ from typing import Any, AsyncGenerator
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableParallel
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 
-from app.config import GOOGLE_API_KEY, LLM_MODEL, LLM_TEMPERATURE
+from app.config import settings
 from app.prompts import (
     CATEGORY_PROMPT,
     EXPLANATION_PROMPT,
@@ -28,13 +28,12 @@ logger = logging.getLogger(__name__)
 
 # ── LLM instance ────────────────────────────────────────────────────────────
 
-def _build_llm() -> ChatGoogleGenerativeAI:
+def _build_llm() -> ChatOllama:
     """Create a configured LLM instance."""
-    return ChatGoogleGenerativeAI(
-        model=LLM_MODEL,
-        google_api_key=GOOGLE_API_KEY,
-        temperature=LLM_TEMPERATURE,
-        convert_system_message_to_human=True,
+    return ChatOllama(
+        model=settings.LLM_MODEL,
+        temperature=settings.LLM_TEMPERATURE,
+        base_url=settings.OLLAMA_BASE_URL,
     )
 
 

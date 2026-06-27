@@ -2,13 +2,32 @@
 
 from __future__ import annotations
 
-import os
-
-from dotenv import load_dotenv
-
-load_dotenv()
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-LLM_MODEL: str = os.getenv("LLM_MODEL", "gemini-2.5-flash")
-LLM_TEMPERATURE: float = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+class Settings(BaseSettings):
+    """Application settings, loaded from environment variables."""
+    # LLM Settings
+    LLM_MODEL: str = Field(
+        default="llama3.2",
+        description="The Ollama model to use for generation."
+    )
+    LLM_TEMPERATURE: float = Field(
+        default=0.1,
+        description="Temperature for sampling."
+    )
+    
+    # Optional: Ollama host if not running locally
+    OLLAMA_BASE_URL: str = Field(
+        default="http://localhost:11434",
+        description="Base URL for the Ollama server."
+    )
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+settings = Settings()

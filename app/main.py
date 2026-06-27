@@ -13,7 +13,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.chains import run_research, stream_research
-from app.config import GOOGLE_API_KEY
 from app.models import ResearchRequest, ResearchResponse
 
 # ── Logging ──────────────────────────────────────────────────────────────────
@@ -45,17 +44,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# ── Startup check ───────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-async def _validate_config() -> None:
-    if not GOOGLE_API_KEY or GOOGLE_API_KEY == "your-google-api-key-here":
-        logger.warning(
-            "⚠️  GOOGLE_API_KEY is not set. "
-            "Copy .env.example → .env and add your key."
-        )
 
 
 # ── Health check ─────────────────────────────────────────────────────────────

@@ -234,13 +234,14 @@
     }
 
     if (eventName === 'error') {
+      let errMsg = 'Pipeline error';
       try {
         const errData = JSON.parse(dataStr);
-        showError(errData.error || 'Pipeline error');
-      } catch {
-        showError('Pipeline error');
+        errMsg = errData.error || errMsg;
+      } catch (e) {
+        // parse failed, use default
       }
-      return;
+      throw new Error(errMsg);
     }
 
     // Data channel event
@@ -280,6 +281,12 @@
     } catch (err) {
       showError(err.message || 'An unexpected error occurred.');
       setHeaderStatus('ready');
+      // Reset any panels still stuck in processing
+      CHANNELS.forEach(ch => {
+        if (panels[ch].getAttribute('data-state') === 'processing') {
+          setPanelState(ch, 'skeleton');
+        }
+      });
     } finally {
       setLoading(false);
       // Keep progress visible showing 4/4
