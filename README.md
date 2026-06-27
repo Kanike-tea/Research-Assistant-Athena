@@ -1,6 +1,6 @@
 # Research Assistant
 
-A FastAPI backend service powered by **LangChain** and **Google Gemini** that takes a topic string and produces four distinct outputs **in parallel**. The results are streamed to a high-density analytical dashboard via Server-Sent Events (SSE).
+A FastAPI backend service powered by **LangChain** and **Local AI via Ollama (Llama 3.2)** that takes a topic string and produces four distinct outputs **in parallel**. The results are streamed to a high-density analytical dashboard via Server-Sent Events (SSE).
 
 | Output          | Description                                      | Format         |
 | --------------- | ------------------------------------------------ | -------------- |
@@ -51,7 +51,8 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your Google API key
+# Make sure Ollama is installed and running, then pull the model:
+ollama pull llama3.2
 ```
 
 ### 3. Run
@@ -124,8 +125,8 @@ Research-Assistant/
 
 ## Configuration
 
-| Variable          | Default              | Description                         |
-| ----------------- | -------------------- | ----------------------------------- |
-| `GOOGLE_API_KEY`  | -                    | Google AI API key (required)        |
-| `LLM_MODEL`       | `gemini-2.5-flash`   | Gemini model name                   |
-| `LLM_TEMPERATURE` | `0.3`                | LLM sampling temperature            |
+| Variable           | Default                 | Description                         |
+| ------------------ | ----------------------- | ----------------------------------- |
+| `OLLAMA_BASE_URL`  | `http://localhost:11434`| Ollama server URL                   |
+| `LLM_MODEL`        | `llama3.2`              | Ollama model name                   |
+| `LLM_TEMPERATURE`  | `0.3`                   | LLM sampling temperature            |
