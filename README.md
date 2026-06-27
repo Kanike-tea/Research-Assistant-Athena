@@ -1,6 +1,6 @@
-# 🔬 Research Assistant
+# Research Assistant
 
-A FastAPI backend service powered by **LangChain** and **Google Gemini** that takes a topic string and produces four distinct outputs **in parallel**:
+A FastAPI backend service powered by **LangChain** and **Google Gemini** that takes a topic string and produces four distinct outputs **in parallel**. The results are streamed to a high-density analytical dashboard via Server-Sent Events (SSE).
 
 | Output          | Description                                      | Format         |
 | --------------- | ------------------------------------------------ | -------------- |
@@ -12,25 +12,28 @@ A FastAPI backend service powered by **LangChain** and **Google Gemini** that ta
 ## Architecture
 
 ```
-POST /research { "topic": "..." }
-         │
-         ▼
-   ┌─────────────────────────┐
-   │   RunnableParallel      │    ← LangChain parallel execution
-   │  ┌───────┬──────────┐   │
-   │  │Explain│ Summary  │   │
-   │  │Chain  │ Chain    │   │
-   │  ├───────┼──────────┤   │
-   │  │Keyword│ Category │   │
-   │  │Chain  │ Chain    │   │
-   │  └───────┴──────────┘   │
-   └─────────────────────────┘
-         │
-         ▼
-   ResearchResponse (JSON)
+POST /research/stream { "topic": "..." }
+         |
+         V
+   stream_research() async generator
+   +--------------------------------------+
+   |  asyncio.create_task() x 4           |
+   |  +----------+  +----------+         |
+   |  | Summary  |  | Category |  <- fast |
+   |  +----+-----+  +----+-----+         |
+   |       |             |                |
+   |  +----+-----+  +----+----------+    |
+   |  | Keywords |  | Explanation   |    |
+   |  +----+-----+  +----+----------+    |
+   |       |             |                |
+   |  asyncio.as_completed() -> yield     |
+   +--------------------------------------+
+         | SSE events (named: summary, category, keywords, explanation)
+         V
+   Browser: fetch() + ReadableStream
 ```
 
-Each chain is a `PromptTemplate → LLM → StrOutputParser` pipeline. All four chains run concurrently through `RunnableParallel.ainvoke()`.
+Each chain is a `PromptTemplate -> LLM -> StrOutputParser` pipeline. All four chains run concurrently as independent asyncio tasks.
 
 ## Quick Start
 
@@ -57,24 +60,22 @@ cp .env.example .env
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 4. Test
+### 4. Access Dashboard
 
-```bash
-curl -X POST http://localhost:8000/research \
-  -H "Content-Type: application/json" \
-  -d '{"topic": "Quantum Computing"}'
-```
+Open `http://localhost:8000/` in your browser to access the analytical dashboard.
 
 ## API Endpoints
 
-| Method | Path        | Description                    |
-| ------ | ----------- | ------------------------------ |
-| GET    | `/health`   | Liveness probe                 |
-| POST   | `/research` | Analyse a topic (see below)    |
-| GET    | `/docs`     | Interactive Swagger UI         |
-| GET    | `/redoc`    | Alternative API documentation  |
+| Method | Path               | Description                               |
+| ------ | ------------------ | ----------------------------------------- |
+| GET    | `/`                | Serves the frontend dashboard             |
+| GET    | `/health`          | Liveness probe                            |
+| POST   | `/research/stream` | Stream research results via SSE           |
+| POST   | `/research`        | Batch analyse a topic (legacy compatible) |
+| GET    | `/docs`            | Interactive Swagger UI                    |
+| GET    | `/redoc`           | Alternative API documentation             |
 
-### `POST /research`
+### `POST /research/stream`
 
 **Request body:**
 
@@ -84,39 +85,47 @@ curl -X POST http://localhost:8000/research \
 }
 ```
 
-**Response:**
+**Response (text/event-stream):**
 
-```json
-{
-  "topic": "Quantum Computing",
-  "explanation": "## Quantum Computing\n\nQuantum computing leverages ...",
-  "summary": "Quantum computing uses quantum-mechanical phenomena ...",
-  "keywords": ["qubit", "superposition", "entanglement", "quantum gate", ...],
-  "category": "Computer Science"
-}
+```text
+event: category
+data: {"key": "category", "value": "Computer Science"}
+
+event: summary
+data: {"key": "summary", "value": "Quantum computing uses quantum-mechanical phenomena..."}
+
+event: keywords
+data: {"key": "keywords", "value": ["qubit", "superposition", "entanglement"]}
+
+event: explanation
+data: {"key": "explanation", "value": "## Quantum Computing\n\n..."}
+
+event: done
+data: {}
 ```
 
 ## Project Structure
 
-```
+```text
 Research-Assistant/
-├── app/
-│   ├── __init__.py     # Package marker
-│   ├── config.py       # Environment variable loading
-│   ├── models.py       # Pydantic request/response schemas
-│   ├── prompts.py      # ChatPromptTemplates for each chain
-│   ├── chains.py       # LangChain chains + RunnableParallel pipeline
-│   └── main.py         # FastAPI application & endpoints
-├── .env.example        # Environment variable template
-├── .gitignore
-├── requirements.txt
-└── README.md
++-- app/
+|   +-- static/         # Frontend dashboard assets (HTML, CSS, JS)
+|   +-- __init__.py     # Package marker
+|   +-- config.py       # Environment variable loading
+|   +-- models.py       # Pydantic request/response schemas
+|   +-- prompts.py      # ChatPromptTemplates for each chain
+|   +-- chains.py       # LangChain chains + asyncio stream generator
+|   +-- main.py         # FastAPI application & endpoints
++-- .env.example        # Environment variable template
++-- .gitignore
++-- requirements.txt
++-- README.md
 ```
 
 ## Configuration
 
 | Variable          | Default              | Description                         |
 | ----------------- | -------------------- | ----------------------------------- |
-| `GOOGLE_API_KEY`  | —                    | Google AI API key (required)        |
-| `LLM_MODEL`       | `gemini-2.0-flash`   | Gemini model name                   |
+| `GOOGLE_API_KEY`  | -                    | Google AI API key (required)        |
+| `LLM_MODEL`       | `gemini-2.5-flash`   | Gemini model name                   |
 | `LLM_TEMPERATURE` | `0.3`                | LLM sampling temperature            |
