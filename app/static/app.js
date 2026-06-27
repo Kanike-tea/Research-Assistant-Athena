@@ -22,7 +22,28 @@
     errorMessage: document.getElementById('error-message'),
     statusDot:    document.getElementById('status-dot'),
     statusText:   document.getElementById('status-text'),
+    themeBtn:     document.getElementById('theme-toggle'),
   };
+
+  // ── Theme Management ──────────────────────────────────────────
+  function initTheme() {
+    const stored = localStorage.getItem('theme');
+    if (stored === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    
+    dom.themeBtn.addEventListener('click', () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+      }
+    });
+  }
+  initTheme();
 
   // Per-channel panel & body refs
   const panels = {};

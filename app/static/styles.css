@@ -69,6 +69,51 @@
   color-scheme: dark;
 }
 
+[data-theme="light"] {
+  /* Surface palette */
+  --bg-base:       #f8fafc;
+  --bg-panel:      #ffffff;
+  --bg-panel-alt:  #f1f5f9;
+  --bg-skeleton:   #e2e8f0;
+  --bg-input:      #ffffff;
+
+  /* Borders */
+  --border-dim:    #cbd5e1;
+  --border-active: #94a3b8;
+  --border-accent: #0ea5e933;
+
+  /* Accent palette — cyan/teal data colours */
+  --accent:        #0ea5e9;
+  --accent-dim:    #0ea5e955;
+  --accent-glow:   #0ea5e918;
+  --accent-green:  #10b981;
+  --accent-amber:  #f59e0b;
+
+  /* Text */
+  --text-primary:   #0f172a;
+  --text-secondary: #334155;
+  --text-muted:     #64748b;
+  --text-accent:    #0ea5e9;
+
+  /* Keywords */
+  --kw-bg:      #0ea5e911;
+  --kw-border:  #0ea5e944;
+  --kw-text:    #0284c7;
+
+  /* Category */
+  --cat-bg:     #10b98111;
+  --cat-border: #10b98144;
+  --cat-text:   #059669;
+
+  /* Error */
+  --err-bg:     #fef2f2;
+  --err-border: #fca5a5;
+  --err-text:   #ef4444;
+
+  color-scheme: light;
+}
+
+
 
 /* ── Reset ───────────────────────────────────────────────────── */
 *, *::before, *::after {
@@ -104,6 +149,11 @@ body::before {
   background-size: 60px 60px;
   opacity: 0.25;
 }
+
+[data-theme="light"] body::before {
+  opacity: 0.5;
+}
+
 
 
 /* ── Layout Shell ────────────────────────────────────────────── */
@@ -171,6 +221,37 @@ body::before {
   align-items: center;
   gap: var(--sp-2);
 }
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-right: var(--sp-2);
+}
+
+.theme-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-active);
+}
+
+.theme-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.theme-toggle .icon-light { display: none; }
+.theme-toggle .icon-dark { display: block; }
+
+[data-theme="light"] .theme-toggle .icon-light { display: block; }
+[data-theme="light"] .theme-toggle .icon-dark { display: none; }
+
 
 .status-dot {
   width: 6px;
