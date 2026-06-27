@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableParallel
@@ -126,3 +126,56 @@ async def run_research(topic: str) -> dict[str, Any]:
         "keywords": parse_keywords(raw_results["keywords"]),
         "category": raw_results["category"].strip(),
     }
+
+
+# ── Streaming pipeline (SSE) ───────────────────────────────────────────────
+
+def _postprocess(key: str, raw: str) -> Any:
+    """Apply per-key post-processing to raw LLM output."""
+    if key == "keywords":
+        return parse_keywords(raw)
+    return raw.strip()
+
+
+async def stream_research(topic: str) -> AsyncGenerator[tuple[str, Any], None]:
+    """Yield ``(key, value)`` tuples as each chain completes independently.
+
+    Unlike :func:`run_research` which waits for all four chains,
+    this generator fires each chain as a separate ``asyncio.Task`` and
+    yields results **the instant** each one finishes — enabling
+    Server-Sent Events on the API layer.
+    """
+    import asyncio
+
+    chains: dict[str, Any] = {
+        "summary": _build_summary_chain(),
+        "explanation": _build_explanation_chain(),
+        "keywords": _build_keywords_chain(),
+        "category": _build_category_chain(),
+    }
+
+    # Launch all chains concurrently as independent tasks
+    task_to_key: dict[asyncio.Task, str] = {
+        asyncio.create_task(chain.ainvoke({"topic": topic})): key
+        for key, chain in chains.items()
+    }
+
+    # Yield results in completion order (fastest first)
+    for coro in asyncio.as_completed(task_to_key.keys()):
+        result = await coro
+        # Resolve which key this completed task belongs to
+        finished_task = None
+        for task, key in task_to_key.items():
+            if task.done() and not getattr(task, "_yielded", False):
+                try:
+                    if task.result() is result:
+                        finished_task = task
+                        break
+                except Exception:
+                    continue
+        if finished_task is None:
+            # Fallback: match by identity didn't work — iterate remaining
+            continue
+        finished_task._yielded = True  # type: ignore[attr-defined]
+        key = task_to_key[finished_task]
+        yield (key, _postprocess(key, result))

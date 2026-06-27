@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.chains import run_research
+from app.chains import run_research, stream_research
 from app.config import GOOGLE_API_KEY
 from app.models import ResearchRequest, ResearchResponse
 
@@ -33,7 +34,7 @@ app = FastAPI(
         "a detailed explanation, a short summary, a list of important keywords, "
         "and a topic category — all powered by LangChain + Google Gemini."
     ),
-    version="1.0.0",
+    version="2.0.0",
 )
 
 # CORS – allow all origins during development
@@ -65,7 +66,7 @@ async def health_check():
     return {"status": "ok"}
 
 
-# ── Main research endpoint ──────────────────────────────────────────────────
+# ── Main research endpoint (batch) ─────────────────────────────────────────
 
 @app.post(
     "/research",
@@ -103,6 +104,47 @@ async def research(request: ResearchRequest) -> ResearchResponse:
     return ResearchResponse(**result)
 
 
+# ── Streaming research endpoint (SSE) ──────────────────────────────────────
+
+@app.post(
+    "/research/stream",
+    tags=["research"],
+    summary="Stream research results via SSE",
+    description=(
+        "Accepts a topic string and streams results as Server-Sent Events. "
+        "Each chain result is sent the instant it completes. "
+        "Event names: summary, explanation, keywords, category, done."
+    ),
+)
+async def research_stream(request: ResearchRequest):
+    """Stream research results as Server-Sent Events."""
+    logger.info("📡 SSE stream request — topic: %r", request.topic)
+
+    async def event_generator():
+        try:
+            async for key, value in stream_research(request.topic):
+                payload = json.dumps({"key": key, "value": value}, ensure_ascii=False)
+                yield f"event: {key}\ndata: {payload}\n\n"
+                logger.info("  → Streamed: %s", key)
+
+            yield "event: done\ndata: {}\n\n"
+            logger.info("✅ SSE stream complete — topic: %r", request.topic)
+        except Exception as exc:
+            error_payload = json.dumps({"error": str(exc)})
+            yield f"event: error\ndata: {error_payload}\n\n"
+            logger.exception("SSE stream failed for topic %r", request.topic)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 # ── Frontend ────────────────────────────────────────────────────────────────
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -116,3 +158,4 @@ async def serve_frontend():
 
 # Mount static assets AFTER all routes so /docs, /health etc. are not shadowed
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+

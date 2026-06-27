@@ -1,172 +1,281 @@
 /* ================================================================
-   Research Assistant — Client-side Application Logic
-   Handles form submission, API calls, and UI state management
+   Research Assistant — Dashboard Controller
+   SSE streaming consumer with per-component state management
    ================================================================ */
 
 (() => {
   'use strict';
 
-  // ── DOM References ────────────────────────────────────────────
-  const form            = document.getElementById('search-form');
-  const topicInput      = document.getElementById('topic-input');
-  const btnSearch       = document.getElementById('btn-search');
-  const errorBanner     = document.getElementById('error-banner');
-  const errorMessage    = document.getElementById('error-message');
-  const resultsSection  = document.getElementById('results-section');
-  const resultsTopic    = document.getElementById('results-topic');
+  // ── Channel Keys ──────────────────────────────────────────────
+  const CHANNELS = ['category', 'summary', 'keywords', 'explanation'];
+  const TOTAL    = CHANNELS.length;
 
-  const explanationEl   = document.getElementById('explanation-content');
-  const summaryEl       = document.getElementById('summary-content');
-  const keywordsEl      = document.getElementById('keywords-content');
-  const categoryEl      = document.getElementById('category-content');
+  // ── DOM Cache ─────────────────────────────────────────────────
+  const dom = {
+    form:         document.getElementById('search-form'),
+    input:        document.getElementById('topic-input'),
+    btn:          document.getElementById('btn-execute'),
+    progressBar:  document.getElementById('progress-bar'),
+    progressFill: document.getElementById('progress-fill'),
+    progressLabel:document.getElementById('progress-label'),
+    errorBanner:  document.getElementById('error-banner'),
+    errorMessage: document.getElementById('error-message'),
+    statusDot:    document.getElementById('status-dot'),
+    statusText:   document.getElementById('status-text'),
+  };
+
+  // Per-channel panel & body refs
+  const panels = {};
+  const bodies = {};
+  CHANNELS.forEach(ch => {
+    panels[ch] = document.getElementById(`panel-${ch}`);
+    bodies[ch] = document.getElementById(`body-${ch}`);
+  });
 
 
-  // ── Skeleton HTML generators ──────────────────────────────────
-  function skeletonLines(count) {
-    return Array.from({ length: count }, () =>
-      `<div class="skeleton skeleton-line"></div>`
-    ).join('');
+  // ── Skeleton HTML ─────────────────────────────────────────────
+  const SKELETONS = {
+    category:    '<div class="skel skel-badge"></div>',
+    summary:     '<div class="skel skel-line"></div>'.repeat(3),
+    keywords:    '<span class="skel skel-pill"></span>'.repeat(6),
+    explanation: '<div class="skel skel-line"></div>'.repeat(6),
+  };
+
+
+  // ── State ─────────────────────────────────────────────────────
+  let completed = 0;
+
+
+  // ── Panel State Machine ───────────────────────────────────────
+  function setPanelState(channel, state) {
+    const panel = panels[channel];
+    if (!panel) return;
+    panel.setAttribute('data-state', state);
   }
 
-  function skeletonPills(count) {
-    return Array.from({ length: count }, () =>
-      `<span class="skeleton skeleton-pill"></span>`
-    ).join('');
+  function resetAllPanels() {
+    CHANNELS.forEach(ch => {
+      setPanelState(ch, 'skeleton');
+      bodies[ch].innerHTML = SKELETONS[ch];
+    });
   }
 
-  function skeletonBadge() {
-    return `<div class="skeleton skeleton-badge"></div>`;
-  }
-
-  function showSkeletons() {
-    explanationEl.innerHTML = skeletonLines(8);
-    summaryEl.innerHTML     = skeletonLines(3);
-    keywordsEl.innerHTML    = skeletonPills(6);
-    categoryEl.innerHTML    = skeletonBadge();
+  function setAllProcessing() {
+    CHANNELS.forEach(ch => setPanelState(ch, 'processing'));
   }
 
 
-  // ── UI State Helpers ──────────────────────────────────────────
-  function setLoading(isLoading) {
-    btnSearch.classList.toggle('loading', isLoading);
-    btnSearch.disabled  = isLoading;
-    topicInput.disabled = isLoading;
+  // ── Progress Bar ──────────────────────────────────────────────
+  function showProgress() {
+    dom.progressBar.classList.add('visible');
+    updateProgress(0);
   }
 
-  function showError(message) {
-    errorMessage.textContent = message;
-    errorBanner.classList.add('visible');
+  function hideProgress() {
+    dom.progressBar.classList.remove('visible');
+  }
+
+  function updateProgress(count) {
+    completed = count;
+    const pct = Math.round((count / TOTAL) * 100);
+    dom.progressFill.style.width = `${pct}%`;
+    dom.progressLabel.textContent = `${count} / ${TOTAL} tasks`;
+  }
+
+
+  // ── Header Status ─────────────────────────────────────────────
+  function setHeaderStatus(mode) {
+    const dot  = dom.statusDot;
+    const text = dom.statusText;
+    dot.classList.remove('ready', 'processing');
+
+    switch (mode) {
+      case 'ready':
+        dot.classList.add('ready');
+        text.textContent = 'READY';
+        break;
+      case 'processing':
+        dot.classList.add('processing');
+        text.textContent = 'PROCESSING';
+        break;
+      case 'done':
+        dot.classList.add('ready');
+        text.textContent = 'COMPLETE';
+        break;
+    }
+  }
+
+
+  // ── Error ─────────────────────────────────────────────────────
+  function showError(msg) {
+    dom.errorMessage.textContent = msg;
+    dom.errorBanner.classList.add('visible');
   }
 
   function hideError() {
-    errorBanner.classList.remove('visible');
-  }
-
-  function showResults() {
-    resultsSection.classList.add('visible');
-  }
-
-  function hideResults() {
-    resultsSection.classList.remove('visible');
+    dom.errorBanner.classList.remove('visible');
   }
 
 
-  // ── Render Results ────────────────────────────────────────────
-  function renderExplanation(markdown) {
-    const html = typeof marked !== 'undefined' && marked.parse
-      ? marked.parse(markdown)
-      : `<p>${markdown}</p>`;
-    explanationEl.innerHTML = `<div class="markdown-content">${html}</div>`;
-  }
-
-  function renderSummary(text) {
-    summaryEl.innerHTML = `<p class="summary-text">${escapeHtml(text)}</p>`;
-  }
-
-  function renderKeywords(keywords) {
-    const pills = keywords.map(kw =>
-      `<li class="keyword-pill">${escapeHtml(kw)}</li>`
-    ).join('');
-    keywordsEl.innerHTML = `<ul class="keywords-list">${pills}</ul>`;
-  }
-
-  function renderCategory(category) {
-    categoryEl.innerHTML = `
-      <div class="category-badge">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-        </svg>
-        ${escapeHtml(category)}
-      </div>`;
-  }
-
-  function renderAll(data) {
-    resultsTopic.textContent = data.topic;
-    renderExplanation(data.explanation);
-    renderSummary(data.summary);
-    renderKeywords(data.keywords);
-    renderCategory(data.category);
-
-    // Re-trigger card animations by briefly removing & re-adding the class
-    const cards = resultsSection.querySelectorAll('.card');
-    cards.forEach(card => {
-      card.style.animation = 'none';
-      // Force reflow
-      void card.offsetHeight;
-      card.style.animation = '';
-    });
-
-    showResults();
+  // ── Loading State ─────────────────────────────────────────────
+  function setLoading(on) {
+    dom.btn.classList.toggle('loading', on);
+    dom.btn.disabled   = on;
+    dom.input.disabled = on;
   }
 
 
-  // ── API Call ──────────────────────────────────────────────────
-  async function fetchResearch(topic) {
-    const response = await fetch('/research', {
+  // ── Content Renderers (per-channel) ───────────────────────────
+  // Each renders content as a COMPLETE BLOCK — no typing animation.
+
+  const renderers = {
+    category(value) {
+      bodies.category.innerHTML = `<div class="category-badge">${esc(value)}</div>`;
+    },
+
+    summary(value) {
+      bodies.summary.innerHTML = `<p class="summary-text">${esc(value)}</p>`;
+    },
+
+    keywords(value) {
+      const list = Array.isArray(value) ? value : [value];
+      const pills = list.map(kw => `<li class="kw-pill">${esc(kw)}</li>`).join('');
+      bodies.keywords.innerHTML = `<ul class="kw-cloud">${pills}</ul>`;
+    },
+
+    explanation(value) {
+      const html = typeof marked !== 'undefined' && marked.parse
+        ? marked.parse(value)
+        : `<p>${esc(value)}</p>`;
+      bodies.explanation.innerHTML = `<div class="md-content">${html}</div>`;
+    },
+  };
+
+
+  // ── SSE Stream Consumer ───────────────────────────────────────
+  // We use fetch + ReadableStream (not EventSource) because this
+  // is a POST endpoint. We parse SSE lines manually.
+
+  async function consumeStream(topic) {
+    const response = await fetch('/research/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Request failed with status ${response.status}`);
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || `Request failed (${response.status})`);
     }
 
-    return response.json();
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer    = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE messages are separated by double newlines
+      const messages = buffer.split('\n\n');
+      // Last element is incomplete — keep in buffer
+      buffer = messages.pop();
+
+      for (const msg of messages) {
+        if (!msg.trim()) continue;
+        processSSEMessage(msg);
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      processSSEMessage(buffer);
+    }
+  }
+
+  function processSSEMessage(raw) {
+    let eventName = '';
+    let dataStr   = '';
+
+    for (const line of raw.split('\n')) {
+      if (line.startsWith('event: ')) {
+        eventName = line.slice(7).trim();
+      } else if (line.startsWith('data: ')) {
+        dataStr = line.slice(6);
+      }
+    }
+
+    if (eventName === 'done') {
+      // All tasks complete
+      return;
+    }
+
+    if (eventName === 'error') {
+      try {
+        const errData = JSON.parse(dataStr);
+        showError(errData.error || 'Pipeline error');
+      } catch {
+        showError('Pipeline error');
+      }
+      return;
+    }
+
+    // Data channel event
+    if (CHANNELS.includes(eventName) && dataStr) {
+      try {
+        const payload = JSON.parse(dataStr);
+        const renderer = renderers[eventName];
+        if (renderer) {
+          renderer(payload.value);
+          setPanelState(eventName, 'populated');
+          updateProgress(completed + 1);
+        }
+      } catch (e) {
+        console.error(`Failed to parse ${eventName} data:`, e);
+      }
+    }
   }
 
 
   // ── Form Handler ──────────────────────────────────────────────
-  form.addEventListener('submit', async (e) => {
+  dom.form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const topic = topicInput.value.trim();
+    const topic = dom.input.value.trim();
     if (!topic) return;
 
     hideError();
-    showResults();
-    showSkeletons();
+    resetAllPanels();
+    setAllProcessing();
+    showProgress();
     setLoading(true);
+    setHeaderStatus('processing');
 
     try {
-      const data = await fetchResearch(topic);
-      renderAll(data);
+      await consumeStream(topic);
+      setHeaderStatus('done');
     } catch (err) {
-      hideResults();
-      showError(err.message || 'An unexpected error occurred. Please try again.');
+      showError(err.message || 'An unexpected error occurred.');
+      setHeaderStatus('ready');
     } finally {
       setLoading(false);
+      // Keep progress visible showing 4/4
+      if (completed >= TOTAL) {
+        setTimeout(() => hideProgress(), 2000);
+      } else {
+        hideProgress();
+      }
     }
   });
 
 
   // ── Utility ───────────────────────────────────────────────────
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.innerHTML;
   }
 
 })();
