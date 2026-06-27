@@ -31,7 +31,7 @@ app = FastAPI(
     description=(
         "Takes a topic string and produces four distinct outputs in parallel: "
         "a detailed explanation, a short summary, a list of important keywords, "
-        "and a topic category — all powered by LangChain + Google Gemini."
+        "and a topic category — all powered by LangChain + Ollama."
     ),
     version="2.0.0",
 )
