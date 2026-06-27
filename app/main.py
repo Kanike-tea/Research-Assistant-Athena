@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.chains import run_research
 from app.config import GOOGLE_API_KEY
@@ -98,3 +101,18 @@ async def research(request: ResearchRequest) -> ResearchResponse:
     )
 
     return ResearchResponse(**result)
+
+
+# ── Frontend ────────────────────────────────────────────────────────────────
+
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+@app.get("/", include_in_schema=False)
+async def serve_frontend():
+    """Serve the single-page frontend application."""
+    return FileResponse(_STATIC_DIR / "index.html")
+
+
+# Mount static assets AFTER all routes so /docs, /health etc. are not shadowed
+app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
