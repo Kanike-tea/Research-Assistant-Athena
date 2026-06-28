@@ -116,8 +116,11 @@ async def research(request: ResearchRequest) -> ResearchResponse:
         len(result["keywords"]),
         elapsed,
     )
-
+    result["execution_time"] = round(elapsed, 2)
     return ResearchResponse(**result)
+    
+
+    
 
 
 # ── Streaming research endpoint (SSE) ──────────────────────────────────────
@@ -137,11 +140,17 @@ async def research_stream(request: ResearchRequest):
     logger.info("📡 SSE stream request — topic: %r", request.topic)
 
     async def event_generator():
+        start = time.perf_counter()
         try:
             async for key, value in stream_research(request.topic):
                 payload = json.dumps({"key": key, "value": value}, ensure_ascii=False)
                 yield f"event: {key}\ndata: {payload}\n\n"
                 logger.info("  → Streamed: %s", key)
+            elapsed = round(time.perf_counter() - start, 2)
+            logger.info("Execution Time: %.2f seconds", elapsed)
+
+            payload = json.dumps({"execution_time": elapsed})
+            yield f"event: execution_time\ndata: {payload}\n\n"
 
             yield "event: done\ndata: {}\n\n"
             logger.info("✅ SSE stream complete — topic: %r", request.topic)

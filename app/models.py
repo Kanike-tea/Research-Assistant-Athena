@@ -50,3 +50,7 @@ class ResearchResponse(BaseModel):
     description="A broad academic or professional category for the topic.",
     examples=["Computer Science"],
     )
+    execution_time: float = Field(
+    ...,
+    description="Time taken to process the request in seconds."
+    )

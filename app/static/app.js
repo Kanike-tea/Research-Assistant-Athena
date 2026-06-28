@@ -10,7 +10,9 @@
   const CHANNELS = ['category', 'summary', 'keywords', 'explanation'];
   const TOTAL    = CHANNELS.length;
 
+  
   // ── DOM Cache ─────────────────────────────────────────────────
+  
   const dom = {
     form:         document.getElementById('search-form'),
     input:        document.getElementById('topic-input'),
@@ -23,8 +25,8 @@
     statusDot:    document.getElementById('status-dot'),
     statusText:   document.getElementById('status-text'),
     themeBtn:     document.getElementById('theme-toggle'),
-    historyList: document.getElementById("history-list"),
-    clearHistory: document.getElementById("clear-history"),
+    executionTime: document.getElementById("execution-time"),
+    downloadBtn: document.getElementById("download-txt"),
   };
 
   // ── Theme Management ──────────────────────────────────────────
@@ -67,74 +69,7 @@
 
   // ── State ─────────────────────────────────────────────────────
   let completed = 0;
-
-  // ── Search History ─────────────────────────────
-
-  let searchHistory = JSON.parse(localStorage.getItem("searchHistory")) || [];
-
-  function renderHistory() {
-    dom.historyList.innerHTML = "";
-
-    searchHistory.forEach((topic, index) => {
-      const li = document.createElement("li");
-      li.className = "history-item";
-      
-      const textSpan = document.createElement("span");
-      textSpan.textContent = topic;
-      textSpan.className = "history-text";
-      
-      const delBtn = document.createElement("button");
-      delBtn.innerHTML = "&times;";
-      delBtn.className = "history-del-btn";
-      delBtn.setAttribute("aria-label", "Delete " + topic);
-      
-      li.appendChild(textSpan);
-      li.appendChild(delBtn);
-
-      textSpan.addEventListener("click", () => {
-        dom.input.value = topic;
-      });
-
-      delBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        deleteHistoryItem(index);
-      });
-
-      dom.historyList.appendChild(li);
-    });
-  }
-
-  function deleteHistoryItem(index) {
-    searchHistory.splice(index, 1);
-    localStorage.setItem("searchHistory", JSON.stringify(searchHistory));
-    historyIndex = -1;
-    renderHistory();
-  }
-
-  function saveHistory(topic) {
-    if (!topic) return;
-
-    // Remove duplicate
-    searchHistory = searchHistory.filter(t => t !== topic);
-
-    // Add newest at top
-    searchHistory.unshift(topic);
-
-    // Keep only last 10
-    searchHistory = searchHistory.slice(0, 10);
-
-    localStorage.setItem(
-      "searchHistory",
-      JSON.stringify(searchHistory)
-    );
-
-    historyIndex = -1;
-
-    renderHistory();
-  }
-
-  renderHistory();
-
+  let currentReport = {};
 
   // ── Panel State Machine ───────────────────────────────────────
   function setPanelState(channel, state) {
@@ -302,6 +237,15 @@
       return;
     }
 
+    if (eventName === "execution_time") {
+    const payload = JSON.parse(dataStr);
+
+    dom.executionTime.textContent =
+        `Execution Time: ${payload.execution_time} seconds`;
+
+    return;
+    }
+
     if (eventName === 'error') {
       let errMsg = 'Pipeline error';
       try {
@@ -317,6 +261,10 @@
     if (CHANNELS.includes(eventName) && dataStr) {
       try {
         const payload = JSON.parse(dataStr);
+        // Save the streamed result
+        currentReport[eventName] = payload.value;
+        
+    
         const renderer = renderers[eventName];
         if (renderer) {
           renderer(payload.value);
@@ -339,6 +287,7 @@
     if (!topic) return;
 
     hideError();
+    dom.executionTime.textContent = "Execution Time: --";
     resetAllPanels();
     setAllProcessing();
     showProgress();
@@ -368,7 +317,35 @@
     }
   });
 
+// ── Download TXT Report ─────────────────────────────────────
+dom.downloadBtn.addEventListener("click", () => {
 
+  const report = `
+Research Report
+
+Category:
+${currentReport.category || ""}
+
+Summary:
+${currentReport.summary || ""}
+
+Keywords:
+${Array.isArray(currentReport.keywords) ? currentReport.keywords.join(", ") : ""}
+
+Explanation:
+${currentReport.explanation || ""}
+`;
+
+  const blob = new Blob([report], { type: "text/plain" });
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "research_report.txt";
+
+  link.click();
+
+  URL.revokeObjectURL(link.href);
+});
   // ── Utility ───────────────────────────────────────────────────
   function esc(str) {
     const d = document.createElement('div');
