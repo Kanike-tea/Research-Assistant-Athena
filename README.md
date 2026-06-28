@@ -130,3 +130,17 @@ Research-Assistant/
 | `OLLAMA_BASE_URL`  | `http://localhost:11434`| Ollama server URL                   |
 | `LLM_MODEL`        | `llama3.2`              | Ollama model name                   |
 | `LLM_TEMPERATURE`  | `0.3`                   | LLM sampling temperature            |
+
+## ✨ Features
+
+- 🚀 FastAPI backend with asynchronous processing
+- 🤖 Local AI integration using Ollama (Llama 3.2)
+- ⚡ Parallel execution using AsyncIO
+- 📡 Real-time streaming using Server-Sent Events (SSE)
+- 📝 Automatic summary generation
+- 🔑 Keyword extraction
+- 🏷️ Topic categorization
+- 📖 Interactive Swagger API documentation
+
+🚀 Future Enhancements - Authentication and user accounts - Research history - PDF export - Multiple LLM support - Citation generation - Dark mode - Docker deployment - Cloud deployment
+
