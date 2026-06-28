@@ -40,8 +40,8 @@ Each chain is a `PromptTemplate -> LLM -> StrOutputParser` pipeline. All four ch
 ### 1. Clone & install
 
 ```bash
-git clone <repo-url>
-cd Athena
+git clone https://github.com/Kanike-tea/Research-Assistant-Athena
+cd Research-Assistant-Athena
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
