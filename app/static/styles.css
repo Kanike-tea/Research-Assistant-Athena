@@ -157,7 +157,20 @@ body::before {
 
 
 /* ── Layout Shell ────────────────────────────────────────────── */
+.app-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100dvh;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border-dim);
+  background: var(--bg-panel-alt);
+  padding: var(--sp-6) var(--sp-4);
+}
+
 .dashboard {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: var(--sp-6) var(--sp-5);
@@ -603,8 +616,8 @@ body::before {
 
 /* Summary */
 .summary-text {
-  font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
   line-height: 1.75;
   color: var(--text-secondary);
 }
@@ -631,8 +644,8 @@ body::before {
 
 /* Explanation (Markdown) */
 .md-content {
-  font-family: var(--font-body);
-  font-size: 0.92rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
   line-height: 1.8;
   color: var(--text-secondary);
 }
@@ -750,6 +763,16 @@ body::before {
 
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-dim);
+    padding: var(--sp-4) var(--sp-5);
+  }
+
   .dash-grid {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
@@ -787,4 +810,64 @@ body::before {
   .skel::after {
     animation: none;
   }
+}
+
+/* ---------- Search History ---------- */
+
+.history-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+#clear-history {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+#clear-history:hover {
+  color: var(--accent);
+}
+
+#history-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.history-item {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-base);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--bg-panel);
 }

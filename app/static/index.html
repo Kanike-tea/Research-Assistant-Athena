@@ -19,9 +19,22 @@
 </head>
 <body>
 
-  <div class="dashboard">
+  <div class="app-layout">
+    <!-- ── Sidebar (History) ───────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="history-panel">
+        <div class="history-header">
+          <span>Recent Searches</span>
+          <button id="clear-history">Clear</button>
+        </div>
+        <ul id="history-list"></ul>
+      </div>
+    </aside>
 
-    <!-- ── Header ────────────────────────────────────────── -->
+    <!-- ── Main Dashboard ────────────────────────────────── -->
+    <main class="dashboard">
+
+      <!-- ── Header ────────────────────────────────────────── -->
     <header class="dash-header">
       <div class="dash-logo" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -174,6 +187,7 @@
       &middot; <a href="/docs" target="_blank" rel="noopener noreferrer">API Docs</a>
     </footer>
 
+    </main>
   </div>
 
   <script src="/static/app.js"></script>

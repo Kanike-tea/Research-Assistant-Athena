@@ -23,6 +23,8 @@
     statusDot:    document.getElementById('status-dot'),
     statusText:   document.getElementById('status-text'),
     themeBtn:     document.getElementById('theme-toggle'),
+    historyList: document.getElementById("history-list"),
+    clearHistory: document.getElementById("clear-history"),
   };
 
   // ── Theme Management ──────────────────────────────────────────
@@ -65,6 +67,50 @@
 
   // ── State ─────────────────────────────────────────────────────
   let completed = 0;
+
+  // ── Search History ─────────────────────────────
+
+  let searchHistory = JSON.parse(localStorage.getItem("searchHistory")) || [];
+
+  function renderHistory() {
+    dom.historyList.innerHTML = "";
+
+    searchHistory.forEach((topic, index) => {
+      const li = document.createElement("li");
+      li.className = "history-item";
+      li.textContent = topic;
+
+      li.addEventListener("click", () => {
+        dom.input.value = topic;
+      });
+
+      dom.historyList.appendChild(li);
+    });
+  }
+
+  function saveHistory(topic) {
+    if (!topic) return;
+
+    // Remove duplicate
+    searchHistory = searchHistory.filter(t => t !== topic);
+
+    // Add newest at top
+    searchHistory.unshift(topic);
+
+    // Keep only last 10
+    searchHistory = searchHistory.slice(0, 10);
+
+    localStorage.setItem(
+      "searchHistory",
+      JSON.stringify(searchHistory)
+    );
+
+    historyIndex = -1;
+
+    renderHistory();
+  }
+
+  renderHistory();
 
 
   // ── Panel State Machine ───────────────────────────────────────
@@ -266,6 +312,7 @@
     e.preventDefault();
 
     const topic = dom.input.value.trim();
+    saveHistory(topic);
     if (!topic) return;
 
     hideError();
@@ -305,5 +352,41 @@
     d.textContent = String(str);
     return d.innerHTML;
   }
+  dom.clearHistory.addEventListener("click", () => {
+    searchHistory = [];
+    localStorage.removeItem("searchHistory");
+    renderHistory();
+  });
 
+  let historyIndex = -1;
+
+  dom.input.addEventListener("keydown", (e) => {
+
+      if (searchHistory.length === 0) return;
+
+      if (e.key === "ArrowUp") {
+
+          e.preventDefault();
+
+          if (historyIndex < searchHistory.length - 1) {
+              historyIndex++;
+          }
+
+          dom.input.value = searchHistory[historyIndex];
+      }
+
+      if (e.key === "ArrowDown") {
+
+          e.preventDefault();
+
+          if (historyIndex > 0) {
+              historyIndex--;
+              dom.input.value = searchHistory[historyIndex];
+          } else {
+              historyIndex = -1;
+              dom.input.value = "";
+          }
+      }
+
+  });
 })();
