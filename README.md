@@ -71,6 +71,7 @@ Open `http://localhost:8000/` in your browser to access the analytical dashboard
 | ------ | ------------------ | ----------------------------------------- |
 | GET    | `/`                | Serves the frontend dashboard             |
 | GET    | `/health`          | Liveness probe                            |
+| GET    | `/metrics`         | API usage metrics and performance statistics |
 | POST   | `/research/stream` | Stream research results via SSE           |
 | POST   | `/research`        | Batch analyse a topic (legacy compatible) |
 | GET    | `/docs`            | Interactive Swagger UI                    |
@@ -116,6 +117,7 @@ Athena/
 |   +-- models.py       # Pydantic request/response schemas
 |   +-- prompts.py      # ChatPromptTemplates for each chain
 |   +-- chains.py       # LangChain chains + asyncio stream generator
+|   +-- metrics.py      # API metrics collection and monitoring
 |   +-- main.py         # FastAPI application & endpoints
 +-- .env.example        # Environment variable template
 +-- .gitignore
