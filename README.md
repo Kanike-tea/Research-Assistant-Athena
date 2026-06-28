@@ -1,4 +1,4 @@
-# Research Assistant
+# Athena
 
 A FastAPI backend service powered by **LangChain** and **Local AI via Ollama (Llama 3.2:1b)** that takes a topic string and produces four distinct outputs **in parallel**. The results are streamed to a high-density, glassmorphic analytical dashboard via Server-Sent Events (SSE).
 
@@ -41,7 +41,7 @@ Each chain is a `PromptTemplate -> LLM -> StrOutputParser` pipeline. All four ch
 
 ```bash
 git clone <repo-url>
-cd Research-Assistant
+cd Athena
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -108,7 +108,7 @@ data: {}
 ## Project Structure
 
 ```text
-Research-Assistant/
+Athena/
 +-- app/
 |   +-- static/         # Frontend dashboard assets (HTML, CSS, JS)
 |   +-- __init__.py     # Package marker
@@ -153,3 +153,8 @@ Research-Assistant/
 - Citation generation
 - Docker deployment
 - Cloud deployment
+
+## Video Demo
+
+![Demo placeholder](https://via.placeholder.com/800x450.png?text=Athena+Demo+Video+Here)
+*(Add a link or GIF of Athena in action here!)*

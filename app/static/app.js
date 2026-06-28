@@ -1,5 +1,5 @@
 /* ================================================================
-   Research Assistant — Dashboard Controller
+   Athena — Dashboard Controller
    SSE streaming consumer with per-component state management
    ================================================================ */
 
