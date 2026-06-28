@@ -18,13 +18,13 @@ POST /research/stream { "topic": "..." }
    stream_research() async generator
    +--------------------------------------+
    |  asyncio.create_task() x 4           |
-   |  +----------+  +----------+         |
+   |  +----------+  +----------+          |
    |  | Summary  |  | Category |  <- fast |
-   |  +----+-----+  +----+-----+         |
+   |  +----+-----+  +----+-----+          |
    |       |             |                |
-   |  +----+-----+  +----+----------+    |
-   |  | Keywords |  | Explanation   |    |
-   |  +----+-----+  +----+----------+    |
+   |  +----+-----+  +----+----------+     |
+   |  | Keywords |  | Explanation   |     |
+   |  +----+-----+  +----+----------+     |
    |       |             |                |
    |  asyncio.as_completed() -> yield     |
    +--------------------------------------+
@@ -131,7 +131,7 @@ Athena/
 | ------------------ | ----------------------- | ----------------------------------- |
 | `OLLAMA_BASE_URL`  | `http://localhost:11434`| Ollama server URL                   |
 | `LLM_MODEL`        | `llama3.2:1b`           | Ollama model name                   |
-| `LLM_TEMPERATURE`  | `0.3`                   | LLM sampling temperature            |
+| `LLM_TEMPERATURE`  | `0.1`                   | LLM sampling temperature            |
 
 ## Features
 
@@ -145,7 +145,7 @@ Athena/
 - Downloadable research reports (PDF)
 - Automatic summary generation
 - Keyword extraction
-- Topic categorization
+- Topic categorisation
 - Interactive Swagger API documentation
 
 ## Future Enhancements
@@ -158,5 +158,4 @@ Athena/
 
 ## Video Demo
 
-![Demo placeholder](https://via.placeholder.com/800x450.png?text=Athena+Demo+Video+Here)
-*(Add a link or GIF of Athena in action here!)*
+![Athena Demo](https://github.com/user-attachments/assets/73fce60a-bd65-445f-9c05-7c71dfc71877)
