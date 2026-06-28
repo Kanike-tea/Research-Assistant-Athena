@@ -616,8 +616,8 @@ body::before {
 
 /* Summary */
 .summary-text {
-  font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
   line-height: 1.75;
   color: var(--text-secondary);
 }
@@ -644,8 +644,8 @@ body::before {
 
 /* Explanation (Markdown) */
 .md-content {
-  font-family: var(--font-body);
-  font-size: 0.92rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
   line-height: 1.8;
   color: var(--text-secondary);
 }
